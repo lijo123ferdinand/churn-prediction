@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- fixes charset warning -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- fixes viewport warning -->
+    <title>Churn Dashboard</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+      th {
+        background-color: #333;
+        color: #fff;
+      }
+      tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧠 Customer Churn Dashboard</h1>
+    <table>
+      <tr>
+        <th>Email</th>
+        <th>Last Login</th>
+        <th>Is Active</th>
+        <th>Churn Score</th>
+      </tr>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.email }}</td>
+        <td>{{ user.last_login }}</td>
+        <td>{{ user.is_active }}</td>
+        <td>{{ user.churn_score|default:"N/A" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </body>
+</html>
