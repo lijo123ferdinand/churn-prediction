@@ -67,6 +67,8 @@ def predict_churn():
         user.is_active = churn_prob < 0.5
         user.save()
         updated_count += 1
+        print(churn_prob)
+
 
         # Send notification for high churn risk users
         if churn_prob > 0.2:
