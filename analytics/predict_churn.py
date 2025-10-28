@@ -71,7 +71,7 @@ def predict_churn():
 
 
         # Send notification for high churn risk users
-        if churn_prob > 0.2:
+        if churn_prob < 0.8:
             print(churn_prob)
             high_risk_users.append((user.email, churn_prob))
             try:
