@@ -4,6 +4,7 @@ import django
 import joblib
 from django.core.mail import send_mail
 import pandas as pd
+from django.conf import settings
 
 # --- Django setup ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -81,7 +82,7 @@ def predict_churn():
                         f"User {user.email} has a churn probability of {churn_prob:.2f}.\n"
                         "Action recommended: send re-engagement offer or discount."
                     ),
-                    from_email=os.getenv("EMAIL_HOST_USER", "your_email@gmail.com"),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=["lijoferdinand@gmail.com","lijo_ferdinand@thbs.com"],  # or [user.email]
                     fail_silently=True,
                 )
