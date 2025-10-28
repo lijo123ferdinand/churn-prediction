@@ -2,8 +2,8 @@ import os
 import sys
 import django
 import joblib
-import pandas as pd
 from django.core.mail import send_mail
+import pandas as pd
 
 # --- Django setup ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,60 +16,83 @@ from users.models import User
 
 
 def predict_churn():
-    """Load the trained churn model, predict churn, update user records, and send alerts."""
-    print("✅ Starting churn prediction...")
+    """
+    Load the trained churn model, predict churn probabilities,
+    update user records, and send alerts for high-risk users.
+    """
+    print("🔮 Starting churn prediction...")
+
     model_path = os.path.join(BASE_DIR, "analytics", "churn_model.pkl")
 
     if not os.path.exists(model_path):
         print("❌ Model file not found, skipping prediction.")
         return
 
-    # Load model
+    # Load trained model
     model = joblib.load(model_path)
+    print("✅ Model loaded successfully.")
 
-    # Get user features
+    # Extract user features
     df = get_user_features()
     if df.empty:
-        print("⚠️ No user data available for prediction.")
+        print("⚠️ No user data available for churn prediction.")
         return
 
-    # Predict churn probability
-    df['churn_probability'] = model.predict_proba(
-        df[['days_since_last_login', 'avg_order_value', 'purchase_frequency']]
-    )[:, 1]
+    # Ensure necessary columns are present
+    feature_cols = ['days_since_last_login', 'avg_order_value', 'purchase_frequency']
+    missing_cols = [col for col in feature_cols if col not in df.columns]
+    if missing_cols:
+        print(f"❌ Missing required feature columns: {missing_cols}")
+        return
+
+    # Predict churn probabilities
+    df['churn_probability'] = model.predict_proba(df[feature_cols])[:, 1]
 
     updated_count = 0
+    high_risk_users = []
 
-    # Iterate through all users and update records
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
         user_id = row['user_id']
+        churn_prob = float(row['churn_probability'])
+
         try:
-            user = User.objects.get(id=user_id)
-            churn_prob = float(row['churn_probability'])
+            # Make sure IDs are numeric (since Kafka can send string IDs)
+            user = User.objects.get(id=int(user_id))
+        except (User.DoesNotExist, ValueError):
+            print(f"⚠️ User with id {user_id} not found or invalid, skipping.")
+            continue
 
-            user.churn_score = churn_prob
-            user.is_active = churn_prob < 0.5
-            user.save()
-            updated_count += 1
+        # Update churn-related fields
+        user.churn_score = churn_prob
+        user.is_active = churn_prob < 0.5
+        user.save()
+        updated_count += 1
 
-            # 🚨 Send notification if churn probability > 0.8
-            if churn_prob > 0.8:
+        # Send notification for high churn risk users
+        if churn_prob > 0.8:
+            high_risk_users.append((user.email, churn_prob))
+            try:
                 send_mail(
-                    subject=f"⚠️ High Churn Risk Detected for {user.email}",
+                    subject=f"⚠️ High Churn Risk: {user.email}",
                     message=(
                         f"User {user.email} has a churn probability of {churn_prob:.2f}.\n"
-                        "Consider taking engagement action (discounts, reactivation email, etc)."
+                        "Action recommended: send re-engagement offer or discount."
                     ),
                     from_email=os.getenv("EMAIL_HOST_USER", "your_email@gmail.com"),
-                    recipient_list=["lijoferdinand@gmail.com"],  # or user.email if you want to email the user directly
-                    fail_silently=False,
+                    recipient_list=["admin@yourcompany.com"],  # or [user.email]
+                    fail_silently=True,
                 )
-                print(f"📧 Email alert sent for high-churn user: {user.email}")
+                print(f"📧 Alert email sent for {user.email} (churn {churn_prob:.2f})")
+            except Exception as e:
+                print(f"❌ Failed to send email to {user.email}: {e}")
 
-        except User.DoesNotExist:
-            print(f"⚠️ User with id {user_id} not found, skipping.")
-
-    print(f"✅ Predicted churn for {updated_count} users and updated their records.")
+    print(f"✅ Updated churn data for {updated_count} users.")
+    if high_risk_users:
+        print(f"🚨 {len(high_risk_users)} users flagged as high-risk:")
+        for email, prob in high_risk_users:
+            print(f"   - {email}: {prob:.2f}")
+    else:
+        print("✅ No high-risk users detected.")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import os
 import django
 import json
+from datetime import datetime
 from confluent_kafka import Consumer, KafkaException
 import threading
 from analytics.train_model import train_churn_model
@@ -10,6 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'churn_prediction.settings')
 django.setup()
 
 from analytics.models import UserEvent
+from users.models import User
 
 # --- Kafka setup ---
 conf = {
@@ -21,8 +23,7 @@ conf = {
 consumer = Consumer(conf)
 consumer.subscribe(['user_events'])
 
-# --- Training interval ---
-TRAIN_INTERVAL = 10   # retrain after every 100 new events
+TRAIN_INTERVAL = 10
 event_counter = 0
 training_in_progress = False
 
@@ -44,7 +45,6 @@ def trigger_training():
 
     threading.Thread(target=train, daemon=True).start()
 
-
 print("✅ Kafka consumer connected. Listening for events...")
 
 try:
@@ -55,21 +55,40 @@ try:
         if msg.error():
             raise KafkaException(msg.error())
 
-        # Parse message
         event_data = json.loads(msg.value().decode('utf-8'))
 
-        # Save to Django DB
+        user_id = event_data.get('user_id')
+        event_name = event_data.get('event_name')
+        properties = event_data.get('properties', {})
+        timestamp = event_data.get('timestamp')
+
+        # Save event
         UserEvent.objects.create(
-            user_id=event_data.get('user_id', ''),
-            event_name=event_data.get('event_name', ''),
-            properties=event_data.get('properties', {}),
-            timestamp=event_data.get('timestamp')
+            user_id=user_id,
+            event_name=event_name,
+            properties=properties,
+            timestamp=timestamp
         )
 
-        event_counter += 1
-        print(f"💾 Event #{event_counter} saved: {event_data.get('event_name')}")
+        # Update user-level data
+        user, created = User.objects.get_or_create(
+            id=user_id,
+            defaults={'signup_date': datetime.utcnow()}
+        )
 
-        # Trigger training after every N events
+        if event_name == 'purchase':
+            amount = float(properties.get('amount', 0))
+            user.total_orders += 1
+            user.total_spent += amount
+
+        elif event_name == 'login':
+            user.last_login = datetime.utcnow()
+
+        user.save()
+
+        event_counter += 1
+        print(f"💾 Event #{event_counter} saved: {event_name}")
+
         if event_counter % TRAIN_INTERVAL == 0:
             print(f"🎯 {TRAIN_INTERVAL} new events processed — starting retraining...")
             trigger_training()
