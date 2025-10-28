@@ -108,7 +108,7 @@ def predict_churn():
         updated_count += 1
 
         # High-risk users
-        if churn_prob > 0.8:
+        if churn_prob < 0.8:
             high_risk_users.append((user.email, churn_prob))
             subject = f"⚠️ High Churn Risk: {user.email}"
             body = (
