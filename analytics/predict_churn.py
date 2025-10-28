@@ -82,7 +82,7 @@ def predict_churn():
                         "Action recommended: send re-engagement offer or discount."
                     ),
                     from_email=os.getenv("EMAIL_HOST_USER", "your_email@gmail.com"),
-                    recipient_list=["admin@yourcompany.com"],  # or [user.email]
+                    recipient_list=["lijoferdinand@gmail.com","lijo_ferdinand@thbs.com"],  # or [user.email]
                     fail_silently=True,
                 )
                 print(f"📧 Alert email sent for {user.email} (churn {churn_prob:.2f})")
