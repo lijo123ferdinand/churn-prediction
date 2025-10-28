@@ -2,8 +2,10 @@ import os
 import django
 import json
 from confluent_kafka import Consumer, KafkaException
+import threading
+from analytics.train_model import train_churn_model
 
-# --- Setup Django environment ---
+# --- Django setup ---
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'churn_prediction.settings')
 django.setup()
 
@@ -19,6 +21,30 @@ conf = {
 consumer = Consumer(conf)
 consumer.subscribe(['user_events'])
 
+# --- Training interval ---
+TRAIN_INTERVAL = 10   # retrain after every 100 new events
+event_counter = 0
+training_in_progress = False
+
+def trigger_training():
+    """Run model training in a background thread."""
+    global training_in_progress
+    if training_in_progress:
+        print("⚙️ Training already in progress, skipping.")
+        return
+
+    def train():
+        global training_in_progress
+        training_in_progress = True
+        try:
+            train_churn_model()
+        except Exception as e:
+            print(f"❌ Training failed: {e}")
+        training_in_progress = False
+
+    threading.Thread(target=train, daemon=True).start()
+
+
 print("✅ Kafka consumer connected. Listening for events...")
 
 try:
@@ -29,9 +55,10 @@ try:
         if msg.error():
             raise KafkaException(msg.error())
 
+        # Parse message
         event_data = json.loads(msg.value().decode('utf-8'))
 
-        # Save to database
+        # Save to Django DB
         UserEvent.objects.create(
             user_id=event_data.get('user_id', ''),
             event_name=event_data.get('event_name', ''),
@@ -39,9 +66,15 @@ try:
             timestamp=event_data.get('timestamp')
         )
 
-        print(f"💾 Event saved: {event_data}")
+        event_counter += 1
+        print(f"💾 Event #{event_counter} saved: {event_data.get('event_name')}")
+
+        # Trigger training after every N events
+        if event_counter % TRAIN_INTERVAL == 0:
+            print(f"🎯 {TRAIN_INTERVAL} new events processed — starting retraining...")
+            trigger_training()
 
 except KeyboardInterrupt:
-    pass
+    print("🛑 Consumer stopped by user.")
 finally:
     consumer.close()
