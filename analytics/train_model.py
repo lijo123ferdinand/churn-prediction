@@ -4,7 +4,6 @@ import django
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 import joblib
 
@@ -19,7 +18,8 @@ from analytics.utils import get_user_features
 def train_churn_model():
     """
     Train churn prediction model using user feature data
-    and save the trained model to churn_model.pkl
+    and save the trained model to churn_model.pkl,
+    then automatically predict churn for all users.
     """
 
     print("🚀 Starting churn model training...")
@@ -43,7 +43,7 @@ def train_churn_model():
         X, y, test_size=0.2, random_state=42
     )
 
-    # Model choice (XGBoost recommended)
+    # Model choice (XGBoost)
     model = XGBClassifier(
         n_estimators=200,
         max_depth=4,
@@ -66,8 +66,15 @@ def train_churn_model():
     # Save model
     model_path = os.path.join(BASE_DIR, "analytics", "churn_model.pkl")
     joblib.dump(model, model_path)
-
     print(f"✅ Model training complete. Saved as {model_path}")
+
+    # --- Auto run churn prediction after training ---
+    try:
+        from analytics.predict_churn import predict_churn
+        print("🔮 Running churn prediction for all users...")
+        predict_churn()
+    except Exception as e:
+        print(f"⚠️ Failed to run churn prediction automatically: {e}")
 
 
 if __name__ == "__main__":
