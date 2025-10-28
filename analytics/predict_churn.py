@@ -41,15 +41,16 @@ df['churn_probability'] = model.predict_proba(df[required_cols])[:, 1]
 
 # --- Update user table ---
 updated_count = 0
-for _, row in df.iterrows():
+for index, row in df.iterrows():
+    user_id = str(row['user_id']).replace('user_', '')  # remove 'user_' prefix if present
     try:
-        user = User.objects.get(id=row['user_id'])
-        user.churn_score = float(row['churn_probability'])
-        user.is_active = row['churn_probability'] < 0.5
-        user.last_churn_check = timezone.now()  # optional tracking
-        user.save()
-        updated_count += 1
+        user = User.objects.get(id=int(user_id))
     except User.DoesNotExist:
-        print(f"⚠️ User not found for id={row['user_id']} — skipping.")
+        print(f"⚠️ User with id {user_id} not found, skipping.")
+        continue
+
+    user.churn_score = float(row['churn_probability'])
+    user.is_active = row['churn_probability'] < 0.5
+    user.save()
 
 print(f"✅ Predicted churn for {updated_count} users and updated their records.")
