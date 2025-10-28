@@ -23,7 +23,7 @@ conf = {
 consumer = Consumer(conf)
 consumer.subscribe(['user_events'])
 
-TRAIN_INTERVAL = 10
+TRAIN_INTERVAL = 3
 event_counter = 0
 training_in_progress = False
 
