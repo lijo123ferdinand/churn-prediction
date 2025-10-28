@@ -2,6 +2,7 @@ import os
 import django
 import json
 from datetime import datetime
+from django.utils import timezone
 from confluent_kafka import Consumer, KafkaException
 import threading
 from analytics.train_model import train_churn_model
@@ -17,15 +18,17 @@ from users.models import User
 conf = {
     'bootstrap.servers': 'localhost:9092',
     'group.id': 'event-consumer-group',
-    'auto.offset.reset': 'earliest'
+    'auto.offset.reset': 'earliest',
 }
 
 consumer = Consumer(conf)
 consumer.subscribe(['user_events'])
 
+# --- Training interval ---
 TRAIN_INTERVAL = 3
 event_counter = 0
 training_in_progress = False
+
 
 def trigger_training():
     """Run model training in a background thread."""
@@ -45,6 +48,7 @@ def trigger_training():
 
     threading.Thread(target=train, daemon=True).start()
 
+
 print("✅ Kafka consumer connected. Listening for events...")
 
 try:
@@ -55,40 +59,62 @@ try:
         if msg.error():
             raise KafkaException(msg.error())
 
-        event_data = json.loads(msg.value().decode('utf-8'))
+        # Parse the Kafka message
+        try:
+            event_data = json.loads(msg.value().decode('utf-8'))
+        except json.JSONDecodeError:
+            print("⚠️ Received invalid JSON — skipping message.")
+            continue
 
         user_id = event_data.get('user_id')
-        event_name = event_data.get('event_name')
+        event_name = event_data.get('event_name', 'unknown')
         properties = event_data.get('properties', {})
-        timestamp = event_data.get('timestamp')
 
-        # Save event
+        # --- Fix: make timestamp timezone-aware ---
+        timestamp_str = event_data.get('timestamp')
+        try:
+            timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            timestamp = timezone.make_aware(timestamp)
+        except Exception:
+            timestamp = timezone.now()
+
+        # --- Fix: create user if missing ---
+        user, created = User.objects.get_or_create(
+            id=user_id,
+            defaults={
+                "email": f"user_{user_id}@example.com",
+                "signup_date": timezone.now(),
+                "last_login": timezone.now(),
+                "total_spent": 0,
+                "total_orders": 0,
+            },
+        )
+        if created:
+            print(f"🆕 Created new user with ID {user_id}")
+
+        # --- Update user attributes based on event type ---
+        if event_name == "purchase":
+            amount = float(properties.get("amount", 0))
+            user.total_orders += 1
+            user.total_spent += amount
+
+        elif event_name == "login":
+            user.last_login = timezone.now()
+
+        user.save()
+
+        # --- Save event to DB ---
         UserEvent.objects.create(
             user_id=user_id,
             event_name=event_name,
             properties=properties,
-            timestamp=timestamp
+            timestamp=timestamp,
         )
-
-        # Update user-level data
-        user, created = User.objects.get_or_create(
-            id=user_id,
-            defaults={'signup_date': datetime.utcnow()}
-        )
-
-        if event_name == 'purchase':
-            amount = float(properties.get('amount', 0))
-            user.total_orders += 1
-            user.total_spent += amount
-
-        elif event_name == 'login':
-            user.last_login = datetime.utcnow()
-
-        user.save()
 
         event_counter += 1
         print(f"💾 Event #{event_counter} saved: {event_name}")
 
+        # --- Trigger retraining every TRAIN_INTERVAL events ---
         if event_counter % TRAIN_INTERVAL == 0:
             print(f"🎯 {TRAIN_INTERVAL} new events processed — starting retraining...")
             trigger_training()
