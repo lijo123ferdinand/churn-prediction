@@ -44,6 +44,13 @@ User.objects.all().delete()
 
 
 
+docker exec -it opt-kafka-1 bash
+kafka-topics --bootstrap-server localhost:9092 --list
+kafka-topics --bootstrap-server localhost:9092 \
+  --create \
+  --topic user_events \
+  --partitions 3 \
+  --replication-factor 1
 
 
 
