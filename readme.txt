@@ -116,4 +116,15 @@ services:
 
 
 
+_____________________________________________
+
+
+{
+  "user_id": 504,
+  "event_name": "signup",
+  "properties": {
+    "source": "referral"
+  },
+  "timestamp": "2024-01-10T10:00:00Z"
+}
 
