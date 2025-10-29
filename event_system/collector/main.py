@@ -20,7 +20,7 @@ app.add_middleware(
 )
 
 # Kafka producer
-producer = Producer({'bootstrap.servers': 'kafka:9092'})
+producer = Producer({'bootstrap.servers': 'localhost:9092'})
 TOPIC = 'user_events'
 
 # Root GET route — sanity check
