@@ -9,7 +9,7 @@ def main():
 
     source = (
         KafkaSource.builder()
-        .set_bootstrap_servers("localhost:9092")
+        .set_bootstrap_servers("172.18.0.4:9092")
         .set_topics("user_events")
         .set_group_id("flink_consumer")
         .set_starting_offsets(KafkaOffsetsInitializer.earliest())
