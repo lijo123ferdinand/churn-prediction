@@ -4,7 +4,7 @@ import django
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-from xgboost import XGBClassifier
+from sklearn.linear_model import SGDClassifier
 import joblib
 
 # --- Django setup ---
@@ -15,14 +15,15 @@ django.setup()
 
 from analytics.utils import get_user_features
 
+
 def train_churn_model():
     """
-    Train churn prediction model using user feature data
-    and save the trained model to churn_model.pkl,
-    then automatically predict churn for all users.
+    Incrementally train churn prediction model using user feature data.
+    If a previous model exists, it will be loaded and updated (partial_fit).
+    Otherwise, a new model will be created and trained from scratch.
     """
 
-    print("🚀 Starting churn model training...")
+    print("🚀 Starting (incremental) churn model training...")
 
     # Load features from your custom util
     df = get_user_features()
@@ -38,33 +39,35 @@ def train_churn_model():
     X = df[feature_cols]
     y = df['churn']
 
-    # Split data
+    # Define model save path
+    model_path = os.path.join(BASE_DIR, "analytics", "churn_model.pkl")
+
+    # --- Incremental Learning Logic ---
+    if os.path.exists(model_path):
+        print("♻️ Existing model found. Updating with new data (partial_fit)...")
+        model = joblib.load(model_path)
+
+        # Safety check: ensure model supports partial_fit
+        if hasattr(model, "partial_fit"):
+            model.partial_fit(X, y)
+        else:
+            print("⚠️ Existing model does not support incremental learning. Retraining from scratch.")
+            model = SGDClassifier(loss='log_loss', random_state=42)
+            model.partial_fit(X, y, classes=[0, 1])
+    else:
+        print("🆕 No existing model found. Creating a new one...")
+        model = SGDClassifier(loss='log_loss', random_state=42)
+        model.partial_fit(X, y, classes=[0, 1])
+
+    # Optional: Evaluate model on a small test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
-
-    # Model choice (XGBoost)
-    model = XGBClassifier(
-        n_estimators=200,
-        max_depth=4,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        random_state=42,
-        use_label_encoder=False,
-        eval_metric='logloss'
-    )
-
-    # Fit model
-    model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-
-    # Print metrics
     print("📊 Classification Report:")
     print(classification_report(y_test, y_pred))
 
     # Save model
-    model_path = os.path.join(BASE_DIR, "analytics", "churn_model.pkl")
     joblib.dump(model, model_path)
     print(f"✅ Model training complete. Saved as {model_path}")
 
