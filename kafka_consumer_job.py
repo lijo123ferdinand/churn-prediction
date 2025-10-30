@@ -21,7 +21,12 @@ def main():
     )
 
     # Add source to Flink environment
-    ds = env.from_source(source, watermark_strategy=None, type_info=Types.STRING())
+    ds = env.from_source(
+        source,
+        watermark_strategy=None,
+        source_name="kafka_source",
+        type_info=Types.STRING()
+    )
 
     # Print messages to stdout
     ds.print()
