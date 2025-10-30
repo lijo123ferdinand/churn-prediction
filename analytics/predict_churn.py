@@ -131,14 +131,14 @@ def predict_churn():
                     msg["Subject"] = subject
                     msg["From"] = email_from
                     msg["To"] = ", ".join(
-                        ["lijoferdinand@gmail.com", "lijo_ferdinand@thbs.com"]
+                        ["lijo_ferdinand@thbs.com"]
                     )
                     msg.attach(MIMEText(body, "plain"))
 
                     print("🚀 Sending email using SES...")
                     response = ses_client.send_raw_email(
                         Source=email_from,
-                        Destinations=["lijoferdinand@gmail.com", "lijo_ferdinand@thbs.com"],
+                        Destinations=["lijo_ferdinand@thbs.com"],
                         RawMessage={"Data": msg.as_string()},
                     )
                     print(f"✅ Email sent via SES to {user.email}")
