@@ -1,49 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <!-- fixes charset warning -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- fixes viewport warning -->
     <title>Churn Dashboard</title>
+    <meta http-equiv="refresh" content="10" />
+    <!-- auto-refresh every 10s -->
     <style>
-      body {
-        font-family: sans-serif;
-        margin: 20px;
-      }
       table {
+        width: 80%;
+        margin: 20px auto;
         border-collapse: collapse;
-        width: 100%;
       }
       th,
       td {
         border: 1px solid #ddd;
         padding: 8px;
+        text-align: center;
       }
       th {
-        background-color: #333;
-        color: #fff;
+        background-color: #f4f4f4;
       }
-      tr:nth-child(even) {
-        background-color: #f2f2f2;
+      .high {
+        color: red;
+        font-weight: bold;
+      }
+      .low {
+        color: green;
+      }
+      .unknown {
+        color: gray;
       }
     </style>
   </head>
   <body>
-    <h1>🧠 Customer Churn Dashboard</h1>
+    <h1 style="text-align: center">Churn Risk Dashboard</h1>
     <table>
       <tr>
+        <th>User ID</th>
         <th>Email</th>
         <th>Last Login</th>
-        <th>Is Active</th>
         <th>Churn Score</th>
+        <th>Risk Level</th>
       </tr>
       {% for user in users %}
       <tr>
+        <td>{{ user.id }}</td>
         <td>{{ user.email }}</td>
         <td>{{ user.last_login }}</td>
-        <td>{{ user.is_active }}</td>
         <td>{{ user.churn_score|default:"N/A" }}</td>
+        <td class="{{ user.risk_level }}">{{ user.risk_level }}</td>
       </tr>
       {% endfor %}
     </table>
