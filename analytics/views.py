@@ -19,7 +19,7 @@ django.setup()
 
 # --- Redis connection ---
 try:
-    r = redis.Redis(host="churn-prediction-redis-1", port=6379, db=0)
+    r = redis.Redis(host="churn-prediction-redis-1", port=6380, db=0)
     r.ping()
     logger.info("✅ Connected to Redis successfully.")
 except Exception as e:
