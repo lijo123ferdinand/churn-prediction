@@ -12,8 +12,11 @@ import joblib
 import numpy as np
 from datetime import datetime
 
-# Load ML model once (global)
-model = joblib.load("/app/churn_model.joblib")  # adjust path if needed
+import os
+
+# Determine path relative to this script
+model_path = os.path.join(os.path.dirname(__file__), "app", "churn_model.joblib")
+model = joblib.load(model_path)
 
 
 # --- Redis Setup ---
