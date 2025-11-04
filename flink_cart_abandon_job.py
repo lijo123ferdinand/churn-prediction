@@ -46,7 +46,7 @@ ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO", "alerts@example.com")
 # ──────────────────────────────────────────────────────────────
 def send_email(subject: str, body: str):
     if not USE_SES:
-        print(f"📩 EMAIL (mock)\nSUBJECT: {subject}\n{body}", flush=True)
+        print(f"📩 EMAIL (mock)\nSUBJECT: {subject}\n{body}")
         return
     try:
         ses = boto3.client(
@@ -66,9 +66,9 @@ def send_email(subject: str, body: str):
             Destinations=[ALERT_EMAIL_TO],
             RawMessage={"Data": msg.as_string()},
         )
-        print(f"✅ Email sent: {subject}", flush=True)
+        print(f"✅ Email sent: {subject}")
     except Exception as e:
-        print(f"❌ SES Error: {e}", flush=True)
+        print(f"❌ SES Error: {e}")
 
 # ──────────────────────────────────────────────────────────────
 # FLINK PROCESS FUNCTION
@@ -77,17 +77,17 @@ class CartAbandonProcessor(KeyedProcessFunction):
 
     def open(self, ctx: RuntimeContext):
         try:
-            print("🔄 Loading cart abandonment model:", MODEL_PATH, flush=True)
+            print("🔄 Loading cart abandonment model:", MODEL_PATH)
             if not os.path.exists(MODEL_PATH):
                 raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
 
             self.model = joblib.load(MODEL_PATH)
-            print("✅ Model loaded.", flush=True)
+            print("✅ Model loaded.")
 
-            print(f"🔗 Connecting Redis {REDIS_HOST}:{REDIS_PORT}", flush=True)
+            print(f"🔗 Connecting Redis {REDIS_HOST}:{REDIS_PORT}")
             self.redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
             self.redis.ping()
-            print("✅ Redis OK.", flush=True)
+            print("✅ Redis OK.")
 
             # Proper ValueStateDescriptors
             self.last_cart_ts = ctx.get_state(ValueStateDescriptor("last_cart_ts", Types.LONG()))
@@ -95,10 +95,10 @@ class CartAbandonProcessor(KeyedProcessFunction):
             self.cart_value_sum = ctx.get_state(ValueStateDescriptor("cart_value_sum", Types.FLOAT()))
             self.has_purchased = ctx.get_state(ValueStateDescriptor("has_purchased", Types.BOOLEAN()))
             self.timer_ts = ctx.get_state(ValueStateDescriptor("timer_ts", Types.LONG()))
-            print("✅ State initialized.", flush=True)
+            print("✅ State initialized.")
 
         except Exception as e:
-            print("❌ open() failed:", e, flush=True)
+            print("❌ open() failed:", e)
             traceback.print_exc()
             # re-raise to fail fast and show in task logs
             raise
@@ -130,7 +130,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
         purchased = self.has_purchased.value() or False
 
         # Debug one-liner for each message
-        print(f"📥 [{user_id}] {event_name} @ {ts_str} | items={items} value={cart_value} purchased={purchased}", flush=True)
+        print(f"📥 [{user_id}] {event_name} @ {ts_str} | items={items} value={cart_value} purchased={purchased}")
 
         # ─── Cart activity ──────────────────────────────────
         if event_name in ("add_to_cart", "cart_update", "checkout_started"):
@@ -151,7 +151,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
             try:
                 prob = float(self.model.predict_proba(features)[0][1])
             except Exception as e:
-                print(f"⚠️ predict_proba failed: {e}", flush=True)
+                print(f"⚠️ predict_proba failed: {e}")
                 prob = 0.0
 
             self.redis.hset(
@@ -163,7 +163,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
                     "cart_last_update": event_ts.isoformat(),
                 },
             )
-            print(f"🟢 [{user_id}] live_prob={prob:.2f} items={items} value={cart_value:.2f}", flush=True)
+            print(f"🟢 [{user_id}] live_prob={prob:.2f} items={items} value={cart_value:.2f}")
 
         # ─── Purchase resets ────────────────────────────────
         elif event_name == "purchase":
@@ -171,7 +171,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
             last_cart = 0
             items = 0
             cart_value = 0.0
-            print(f"✅ [{user_id}] purchase -> reset.", flush=True)
+            print(f"✅ [{user_id}] purchase -> reset.")
 
         # update state
         self.last_cart_ts.update(last_cart)
@@ -196,7 +196,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
         cart_value = self.cart_value_sum.value() or 0.0
         purchased = self.has_purchased.value() or False
 
-        print(f"⏰ TIMER [{user_id}] purchased={purchased} last_cart={last_cart} items={items}", flush=True)
+        print(f"⏰ TIMER [{user_id}] purchased={purchased} last_cart={last_cart} items={items}")
 
         if purchased or last_cart == 0 or items == 0:
             return
@@ -205,7 +205,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
         try:
             prob = float(self.model.predict_proba(features)[0][1])
         except Exception as e:
-            print(f"⚠️ predict_proba failed on timer: {e}", flush=True)
+            print(f"⚠️ predict_proba failed on timer: {e}")
             prob = 0.0
 
         self.redis.hset(
@@ -215,7 +215,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
                 "cart_abandon_alerted_at": datetime.now(timezone.utc).isoformat(),
             },
         )
-        print(f"🚨 TIMER ALERT [{user_id}] prob={prob:.2f} items={items} value={cart_value:.2f}", flush=True)
+        print(f"🚨 TIMER ALERT [{user_id}] prob={prob:.2f} items={items} value={cart_value:.2f}")
 
         if prob >= RISK_THRESHOLD:
             send_email(
@@ -241,11 +241,11 @@ class CartAbandonProcessor(KeyedProcessFunction):
 # ──────────────────────────────────────────────────────────────
 def main():
     try:
-        print("🚀 Starting Flink Cart Abandonment Job...", flush=True)
-        print(f"📌 MODEL PATH: {MODEL_PATH}", flush=True)
-        print(f"📌 Kafka: {KAFKA_BOOTSTRAP} / {KAFKA_TOPIC}", flush=True)
-        print(f"📌 Redis: {REDIS_HOST}:{REDIS_PORT}", flush=True)
-        print(f"📌 Abandon window: {ABANDON_WINDOW_MIN} mins  Threshold: {RISK_THRESHOLD}", flush=True)
+        print("🚀 Starting Flink Cart Abandonment Job...")
+        print(f"📌 MODEL PATH: {MODEL_PATH}")
+        print(f"📌 Kafka: {KAFKA_BOOTSTRAP} / {KAFKA_TOPIC}")
+        print(f"📌 Redis: {REDIS_HOST}:{REDIS_PORT}")
+        print(f"📌 Abandon window: {ABANDON_WINDOW_MIN} mins  Threshold: {RISK_THRESHOLD}")
 
         env = StreamExecutionEnvironment.get_execution_environment()
         env.set_parallelism(1)
@@ -270,11 +270,11 @@ def main():
             .key_by(lambda raw: json.loads(raw).get("user_id")) \
             .process(CartAbandonProcessor(), output_type=Types.STRING()).print()
 
-        print("✅ Initialized. Executing job… (waiting for events)", flush=True)
+        print("✅ Initialized. Executing job… (waiting for events)")
         env.execute("Cart Abandonment Realtime Processor")
 
     except Exception as e:
-        print("❌ Job failed to start:", e, flush=True)
+        print("❌ Job failed to start:", e)
         traceback.print_exc()
         raise
 
