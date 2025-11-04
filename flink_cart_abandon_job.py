@@ -178,6 +178,15 @@ class CartAbandonProcessor(KeyedProcessFunction):
         self.items_added.update(items)
         self.cart_value_sum.update(cart_value)
         self.has_purchased.update(purchased)
+        
+    # ✅ RETURN OUTPUT TO THE FLINK PIPELINE HERE
+        return json.dumps({
+            "user_id": user_id,
+            "event": event_name,
+            "items": items,
+            "cart_value": cart_value,
+            "ts": ts_str
+    })
 
     def on_timer(self, timestamp, ctx: 'KeyedProcessFunction.OnTimerContext'):
         user_id = ctx.get_current_key()
@@ -225,6 +234,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
         self.items_added.clear()
         self.cart_value_sum.clear()
         self.has_purchased.clear()
+        
 
 # ──────────────────────────────────────────────────────────────
 # FLINK JOB SETUP
@@ -258,7 +268,7 @@ def main():
 
         stream \
             .key_by(lambda raw: json.loads(raw).get("user_id")) \
-            .process(CartAbandonProcessor(), output_type=Types.VOID())
+            .process(CartAbandonProcessor(), output_type=Types.STRING()).print()
 
         print("✅ Initialized. Executing job… (waiting for events)", flush=True)
         env.execute("Cart Abandonment Realtime Processor")
