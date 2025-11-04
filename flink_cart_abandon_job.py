@@ -1,61 +1,53 @@
-# analytics/flink_cart_abandon_job.py
 import os
 import json
-import time
-import joblib
-import boto3
 import redis
+import joblib
 import numpy as np
-from datetime import datetime, timezone, timedelta
+import traceback
+from datetime import datetime, timezone
 
-from pyflink.common import Types, Time
+from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
-from pyflink.datastream import StreamExecutionEnvironment, TimeCharacteristic
+from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitializer
 from pyflink.datastream.functions import KeyedProcessFunction, RuntimeContext
+from pyflink.datastream.state import ValueStateDescriptor
 from pyflink.common.watermark_strategy import WatermarkStrategy
 
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from botocore.exceptions import ClientError
+# --- Optional SES (only if you really need it)
+USE_SES = os.getenv("USE_SES", "false").lower() in ("1", "true", "yes")
+if USE_SES:
+    import boto3
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from botocore.exceptions import ClientError
 
-# --- Config via env ---
-BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")
+# ──────────────────────────────────────────────────────────────
+# ENV CONFIG
+# ──────────────────────────────────────────────────────────────
+KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")   # <-- set to 172.18.0.4:9092 if needed
 KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "user_events")
+
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
+
+MODEL_PATH = os.getenv("CART_MODEL_PATH", "/shared_models/cart_model.joblib")
 ABANDON_WINDOW_MIN = int(os.getenv("ABANDON_WINDOW_MIN", "60"))
 RISK_THRESHOLD = float(os.getenv("CART_ABANDON_THRESHOLD", "0.75"))
 
-# S3 model
-S3_BUCKET = os.getenv("S3_BUCKET", "ml-models")
-S3_KEY_CART_MODEL = os.getenv("S3_KEY_CART_MODEL", "cart_abandon/cart_model.joblib")
-S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+ALERT_EMAIL_FROM = os.getenv("ALERT_EMAIL_FROM", "no-reply@example.com")
+ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO", "alerts@example.com")
 
-# SES / alerts
-ALERTS_EMAIL_FROM = os.getenv("ALERTS_EMAIL_FROM", "no-reply@example.com")
-ALERTS_EMAIL_TO = os.getenv("ALERTS_EMAIL_TO", "alerts@example.com")
-
-LOCAL_MODEL_PATH = "/shared_models/cart_model.joblib"
-def load_model_local():
-    if not os.path.exists(LOCAL_MODEL_PATH):
-        raise FileNotFoundError(f"❌ Model not found at {LOCAL_MODEL_PATH}. Did you run train_cart_model.py?")
-    return joblib.load(LOCAL_MODEL_PATH)
-
-def download_model():
-    session = boto3.session.Session(
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        region_name=AWS_REGION,
-    )
-    s3 = session.client("s3", endpoint_url=S3_ENDPOINT_URL) if S3_ENDPOINT_URL else session.client("s3")
-    s3.download_file(S3_BUCKET, S3_KEY_CART_MODEL, LOCAL_MODEL_PATH)
-    return joblib.load(LOCAL_MODEL_PATH)
-
+# ──────────────────────────────────────────────────────────────
+# EMAIL SENDER
+# ──────────────────────────────────────────────────────────────
 def send_email(subject: str, body: str):
+    if not USE_SES:
+        print(f"📩 EMAIL (mock)\nSUBJECT: {subject}\n{body}", flush=True)
+        return
     try:
         ses = boto3.client(
             "ses",
@@ -65,102 +57,216 @@ def send_email(subject: str, body: str):
         )
         msg = MIMEMultipart()
         msg["Subject"] = subject
-        msg["From"] = ALERTS_EMAIL_FROM
-        msg["To"] = ALERTS_EMAIL_TO
+        msg["From"] = ALERT_EMAIL_FROM
+        msg["To"] = ALERT_EMAIL_TO
         msg.attach(MIMEText(body, "plain"))
 
         ses.send_raw_email(
-            Source=ALERTS_EMAIL_FROM,
-            Destinations=[ALERTS_EMAIL_TO],
+            Source=ALERT_EMAIL_FROM,
+            Destinations=[ALERT_EMAIL_TO],
             RawMessage={"Data": msg.as_string()},
         )
-    except ClientError as e:
-        print(f"❌ SES error: {e.response['Error']['Message']}")
+        print(f"✅ Email sent: {subject}", flush=True)
+    except Exception as e:
+        print(f"❌ SES Error: {e}", flush=True)
 
-class CartAbandonProcess(KeyedProcessFunction):
+# ──────────────────────────────────────────────────────────────
+# FLINK PROCESS FUNCTION
+# ──────────────────────────────────────────────────────────────
+class CartAbandonProcessor(KeyedProcessFunction):
 
-    def open(self, runtime_context: RuntimeContext):
-        # Load model once on open
-        self.model = load_model_local()
-        self.redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+    def open(self, ctx: RuntimeContext):
+        try:
+            print("🔄 Loading cart abandonment model:", MODEL_PATH, flush=True)
+            if not os.path.exists(MODEL_PATH):
+                raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
 
-        # ValueState: last cart ts, items, value, has_purchase flag
-        state_desc_ts = runtime_context.get_state_descriptor(
-            "last_cart_ts", Types.LONG()  # epoch millis
-        )
-        state_desc_items = runtime_context.get_state_descriptor(
-            "items_added", Types.INT()
-        )
-        state_desc_value = runtime_context.get_state_descriptor(
-            "cart_value_sum", Types.FLOAT()
-        )
-        state_desc_purchased = runtime_context.get_state_descriptor(
-            "has_purchased", Types.BOOLEAN()
-        )
-        state_desc_timer = runtime_context.get_state_descriptor(
-            "timer_ts", Types.LONG()
-        )
+            self.model = joblib.load(MODEL_PATH)
+            print("✅ Model loaded.", flush=True)
 
-        self.last_cart_ts = runtime_context.get_state(state_desc_ts)
-        self.items_added = runtime_context.get_state(state_desc_items)
-        self.cart_value_sum = runtime_context.get_state(state_desc_value)
-        self.has_purchased = runtime_context.get_state(state_desc_purchased)
-        self.timer_ts = runtime_context.get_state(state_desc_timer)
+            print(f"🔗 Connecting Redis {REDIS_HOST}:{REDIS_PORT}", flush=True)
+            self.redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+            self.redis.ping()
+            print("✅ Redis OK.", flush=True)
+
+            # Proper ValueStateDescriptors
+            self.last_cart_ts = ctx.get_state(ValueStateDescriptor("last_cart_ts", Types.LONG()))
+            self.items_added = ctx.get_state(ValueStateDescriptor("items_added", Types.INT()))
+            self.cart_value_sum = ctx.get_state(ValueStateDescriptor("cart_value_sum", Types.FLOAT()))
+            self.has_purchased = ctx.get_state(ValueStateDescriptor("has_purchased", Types.BOOLEAN()))
+            self.timer_ts = ctx.get_state(ValueStateDescriptor("timer_ts", Types.LONG()))
+            print("✅ State initialized.", flush=True)
+
+        except Exception as e:
+            print("❌ open() failed:", e, flush=True)
+            traceback.print_exc()
+            # re-raise to fail fast and show in task logs
+            raise
 
     def process_element(self, value, ctx: 'KeyedProcessFunction.Context'):
-        """
-        value is a JSON string
-        key = user_id
-        """
         try:
-            ev = json.loads(value)
+            event = json.loads(value)
         except Exception:
             return
 
-        user_id = ev.get("user_id")
-        if user_id is None:
+        user_id = event.get("user_id")
+        if not user_id:
             return
 
-        name = ev.get("event_name", "")
-        ts_str = ev.get("timestamp") or datetime.now(timezone.utc).isoformat()
-        props = ev.get("properties") or {}
+        event_name = event.get("event_name", "")
+        props = event.get("properties", {}) or {}
+        ts_str = event.get("timestamp", datetime.now(timezone.utc).isoformat())
+
         try:
             event_ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
         except Exception:
             event_ts = datetime.now(timezone.utc)
+
         event_ms = int(event_ts.timestamp() * 1000)
 
-        # Load current state
         last_cart = self.last_cart_ts.value() or 0
         items = self.items_added.value() or 0
-        val = self.cart_value_sum.value() or 0.0
+        cart_value = self.cart_value_sum.value() or 0.0
         purchased = self.has_purchased.value() or False
 
-        # Handle events
-        if name in ("add_to_cart", "cart_update", "checkout_started"):
+        # Debug one-liner for each message
+        print(f"📥 [{user_id}] {event_name} @ {ts_str} | items={items} value={cart_value} purchased={purchased}", flush=True)
+
+        # ─── Cart activity ──────────────────────────────────
+        if event_name in ("add_to_cart", "cart_update", "checkout_started"):
             qty = int(props.get("qty", 1))
-            cart_val = float(props.get("cart_value", 0.0))
+            val = float(props.get("cart_value", 0.0))
             items += qty
-            val += cart_val
+            cart_value += val
             last_cart = event_ms
             purchased = False
 
-            # Register/refresh timer for abandonment check
-            # Processing time timer at now + window
-            abandon_ms = int(ABANDON_WINDOW_MIN * 60 * 1000)
+            abandon_ms = ABANDON_WINDOW_MIN * 60 * 1000
             fire_at = ctx.timer_service().current_processing_time() + abandon_ms
             ctx.timer_service().register_processing_time_timer(fire_at)
             self.timer_ts.update(fire_at)
 
-        elif name == "purchase":
-            # mark purchased; cancel pending timer by just clearing state
-            purchased = True
-            items = 0
-            val = 0.0
-            last_cart = 0
-            # No explicit timer cancel in Python API; we just ignore when it fires.
+            # live score
+            features = np.array([[items, cart_value, 1 if items > 0 else 0, 1]])
+            try:
+                prob = float(self.model.predict_proba(features)[0][1])
+            except Exception as e:
+                print(f"⚠️ predict_proba failed: {e}", flush=True)
+                prob = 0.0
 
-        # Update state
+            self.redis.hset(
+                f"user:{user_id}",
+                mapping={
+                    "cart_abandon_score": prob,
+                    "cart_items": items,
+                    "cart_value_sum": cart_value,
+                    "cart_last_update": event_ts.isoformat(),
+                },
+            )
+            print(f"🟢 [{user_id}] live_prob={prob:.2f} items={items} value={cart_value:.2f}", flush=True)
+
+        # ─── Purchase resets ────────────────────────────────
+        elif event_name == "purchase":
+            purchased = True
+            last_cart = 0
+            items = 0
+            cart_value = 0.0
+            print(f"✅ [{user_id}] purchase -> reset.", flush=True)
+
+        # update state
         self.last_cart_ts.update(last_cart)
         self.items_added.update(items)
-        self.cart_value_sum.update(val)
+        self.cart_value_sum.update(cart_value)
+        self.has_purchased.update(purchased)
+
+    def on_timer(self, timestamp, ctx: 'KeyedProcessFunction.OnTimerContext'):
+        user_id = ctx.get_current_key()
+
+        last_cart = self.last_cart_ts.value() or 0
+        items = self.items_added.value() or 0
+        cart_value = self.cart_value_sum.value() or 0.0
+        purchased = self.has_purchased.value() or False
+
+        print(f"⏰ TIMER [{user_id}] purchased={purchased} last_cart={last_cart} items={items}", flush=True)
+
+        if purchased or last_cart == 0 or items == 0:
+            return
+
+        features = np.array([[items, cart_value, 1 if items > 0 else 0, 1]])
+        try:
+            prob = float(self.model.predict_proba(features)[0][1])
+        except Exception as e:
+            print(f"⚠️ predict_proba failed on timer: {e}", flush=True)
+            prob = 0.0
+
+        self.redis.hset(
+            f"user:{user_id}",
+            mapping={
+                "cart_abandon_score": prob,
+                "cart_abandon_alerted_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        print(f"🚨 TIMER ALERT [{user_id}] prob={prob:.2f} items={items} value={cart_value:.2f}", flush=True)
+
+        if prob >= RISK_THRESHOLD:
+            send_email(
+                subject=f"🛒 CART ABANDONMENT ALERT: User {user_id} ({prob:.2f})",
+                body=(
+                    f"User {user_id} may abandon cart.\n"
+                    f"Items: {items}\n"
+                    f"Cart value: {cart_value}\n"
+                    f"Score: {prob:.2f}\n"
+                    f"Window: {ABANDON_WINDOW_MIN} minutes inactivity\n"
+                ),
+            )
+
+        # clear session state
+        self.last_cart_ts.clear()
+        self.items_added.clear()
+        self.cart_value_sum.clear()
+        self.has_purchased.clear()
+
+# ──────────────────────────────────────────────────────────────
+# FLINK JOB SETUP
+# ──────────────────────────────────────────────────────────────
+def main():
+    try:
+        print("🚀 Starting Flink Cart Abandonment Job...", flush=True)
+        print(f"📌 MODEL PATH: {MODEL_PATH}", flush=True)
+        print(f"📌 Kafka: {KAFKA_BOOTSTRAP} / {KAFKA_TOPIC}", flush=True)
+        print(f"📌 Redis: {REDIS_HOST}:{REDIS_PORT}", flush=True)
+        print(f"📌 Abandon window: {ABANDON_WINDOW_MIN} mins  Threshold: {RISK_THRESHOLD}", flush=True)
+
+        env = StreamExecutionEnvironment.get_execution_environment()
+        env.set_parallelism(1)
+
+        source = (
+            KafkaSource.builder()
+            .set_topics(KAFKA_TOPIC)
+            .set_group_id("flink_cart_abandon")
+            .set_bootstrap_servers(KAFKA_BOOTSTRAP)
+            .set_starting_offsets(KafkaOffsetsInitializer.latest())
+            .set_value_only_deserializer(SimpleStringSchema())
+            .build()
+        )
+
+        stream = env.from_source(
+            source,
+            WatermarkStrategy.no_watermarks(),
+            "kafka_source"
+        )
+
+        stream \
+            .key_by(lambda raw: json.loads(raw).get("user_id")) \
+            .process(CartAbandonProcessor(), output_type=Types.VOID())
+
+        print("✅ Initialized. Executing job… (waiting for events)", flush=True)
+        env.execute("Cart Abandonment Realtime Processor")
+
+    except Exception as e:
+        print("❌ Job failed to start:", e, flush=True)
+        traceback.print_exc()
+        raise
+
+if __name__ == "__main__":
+    main()
