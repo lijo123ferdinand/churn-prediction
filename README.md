@@ -122,6 +122,7 @@ The `docker-compose.yml` includes:
 - Zookeeper
 - Kafka
 - Redis
+- PostgreSQL
 
 ## 📝 Notes
 
