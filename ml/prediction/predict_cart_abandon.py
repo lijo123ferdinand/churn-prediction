@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 import pandas as pd
 from django.conf import settings
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "churn_prediction.settings")
 django.setup()
@@ -24,8 +24,7 @@ RISK_THRESHOLD = float(os.getenv("CART_ABANDON_THRESHOLD", "0.75"))
 def predict_cart_abandon():
     print("🔮 Predicting cart abandonment (batch)...")
 
-    # model_path = os.path.join(BASE_DIR, "analytics", "cart_model.joblib")
-    model_path = os.path.join(BASE_DIR, "shared_models", "cart_model.joblib")
+    model_path = os.path.join(BASE_DIR, "ml", "models", "shared_models", "cart_model.joblib")
     if not os.path.exists(model_path):
         print("❌ Cart model missing. Train first.")
         return

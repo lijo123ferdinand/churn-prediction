@@ -10,7 +10,7 @@ import pandas as pd
 from django.conf import settings
 
 # --- Django setup ---
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "churn_prediction.settings")
 django.setup()
@@ -27,7 +27,7 @@ def predict_churn():
     """
     print("🔮 Starting churn prediction...")
 
-    model_path = os.path.join(BASE_DIR, "analytics", "churn_model.pkl")
+    model_path = os.path.join(BASE_DIR, "ml", "models", "churn_model.pkl")
 
     if not os.path.exists(model_path):
         print("❌ Model file not found, skipping prediction.")

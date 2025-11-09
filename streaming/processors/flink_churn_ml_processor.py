@@ -14,8 +14,12 @@ from datetime import datetime
 
 import os
 
-# Determine path relative to this script
-model_path = os.path.join(os.path.dirname(__file__), "app", "churn_model.joblib")
+# Determine path relative to project root
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+model_path = os.path.join(BASE_DIR, "ml", "models", "churn_model.pkl")
+# Try .pkl first, fallback to .joblib
+if not os.path.exists(model_path):
+    model_path = os.path.join(BASE_DIR, "ml", "models", "churn_model.joblib")
 model = joblib.load(model_path)
 
 

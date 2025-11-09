@@ -8,7 +8,7 @@ from sklearn.linear_model import SGDClassifier
 import joblib
 
 # --- Django setup ---
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "churn_prediction.settings")
 django.setup()
@@ -40,7 +40,7 @@ def train_churn_model():
     y = df['churn']
 
     # Define model save path
-    model_path = os.path.join(BASE_DIR, "analytics", "churn_model.pkl")
+    model_path = os.path.join(BASE_DIR, "ml", "models", "churn_model.pkl")
 
     # --- Incremental Learning Logic ---
     if os.path.exists(model_path):
@@ -73,7 +73,7 @@ def train_churn_model():
 
     # --- Auto run churn prediction after training ---
     try:
-        from analytics.predict_churn import predict_churn
+        from ml.prediction.predict_churn import predict_churn
         print("🔮 Running churn prediction for all users...")
         predict_churn()
     except Exception as e:

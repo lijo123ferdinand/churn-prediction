@@ -5,7 +5,7 @@ from datetime import datetime
 from django.utils import timezone
 from confluent_kafka import Consumer, KafkaException
 import threading
-from analytics.train_model import train_churn_model
+from ml.training.train_churn import train_churn_model
 
 # --- Django setup ---
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'churn_prediction.settings')

@@ -7,15 +7,15 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "churn_prediction.settings")
 django.setup()
 
 from analytics.utils_cart import get_cart_training_frame
 
-# ✅ Local shared path (make sure Flink sees this path too!)
-MODEL_DIR = os.getenv("MODEL_DIR", "/shared_models")
+# ✅ Model path in organized structure
+MODEL_DIR = os.path.join(BASE_DIR, "ml", "models", "shared_models")
 MODEL_PATH = os.path.join(MODEL_DIR, "cart_model.joblib")
 
 def train_cart_model():
