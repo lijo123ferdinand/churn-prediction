@@ -93,7 +93,10 @@ See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) for detailed documentation.
 
 - **Collector**: FastAPI service that receives events and publishes to Kafka
 - **Consumer**: Django-based Kafka consumer that processes events and triggers model retraining
-- **Processors**: Flink jobs for real-time stream processing
+- **Flink Processors**: Real-time stream processing jobs
+  - Churn prediction processor (ML-based)
+  - Cart abandonment processor
+  - Can run as Python processes (PyFlink) or submit to Flink cluster
 
 ### Django Apps
 
@@ -123,6 +126,7 @@ The `docker-compose.yml` includes:
 - Kafka
 - Redis
 - PostgreSQL
+- Flink (JobManager + TaskManager)
 
 ## 📝 Notes
 

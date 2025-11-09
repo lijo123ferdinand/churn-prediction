@@ -178,6 +178,15 @@ def main():
     if start_consumer():
         services_started.append("Consumer")
     
+    # Start Flink jobs (optional)
+    if os.getenv("START_FLINK_JOBS", "true").lower() in ("true", "1", "yes"):
+        print_step(6, "Starting Flink processing jobs...")
+        try:
+            subprocess.run([sys.executable, "scripts/start_flink_jobs.py"], check=False)
+            services_started.append("Flink Jobs")
+        except Exception as e:
+            print_error(f"Failed to start Flink jobs: {e} (this is optional)")
+    
     # Summary
     print("\n" + "=" * 50)
     print("✅ Startup Complete!")
@@ -185,10 +194,13 @@ def main():
     print("   - Django: http://localhost:8000")
     print("   - FastAPI Collector: http://localhost:9000")
     print("   - Kafka Consumer: Running")
+    print("   - Flink Jobs: Running (if enabled)")
+    print("   - Flink Web UI: http://localhost:8081 (if Flink cluster is running)")
     print("\n📝 Logs:")
     print(f"   - Django: {LOGS_DIR / 'django.log'}")
     print(f"   - Collector: {LOGS_DIR / 'collector.log'}")
     print(f"   - Consumer: {LOGS_DIR / 'consumer.log'}")
+    print(f"   - Flink: {LOGS_DIR / 'flink_*.log'}")
     print("\n🛑 To stop services:")
     print("   - Press Ctrl+C and run: python scripts/stop_all.py")
     print("   - Or manually kill processes from logs/pids.txt")

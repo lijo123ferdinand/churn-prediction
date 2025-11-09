@@ -63,6 +63,14 @@ Write-Host "📦 Step 6: Starting Kafka consumer..." -ForegroundColor Yellow
 Start-Process python -ArgumentList "streaming\consumers\django_consumer.py" -WindowStyle Hidden -RedirectStandardOutput "logs\consumer.log" -RedirectStandardError "logs\consumer_error.log"
 Write-Host "✅ Kafka consumer started" -ForegroundColor Green
 
+# Step 7: Start Flink jobs (optional)
+if ($env:START_FLINK_JOBS -ne "false") {
+    Write-Host "📦 Step 7: Starting Flink processing jobs..." -ForegroundColor Yellow
+    python scripts\start_flink_jobs.py
+} else {
+    Write-Host "📦 Step 7: Flink jobs disabled (set START_FLINK_JOBS=true to enable)" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "✅ All services started successfully!" -ForegroundColor Green
 Write-Host ""
@@ -70,6 +78,8 @@ Write-Host "📊 Service Status:"
 Write-Host "   - Django: http://localhost:8000"
 Write-Host "   - FastAPI Collector: http://localhost:9000"
 Write-Host "   - Kafka Consumer: Running"
+Write-Host "   - Flink Jobs: Running (if enabled)"
+Write-Host "   - Flink Web UI: http://localhost:8081 (if Flink cluster is running)"
 Write-Host ""
 Write-Host "📝 Logs are in the logs/ directory"
 Write-Host ""

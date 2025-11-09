@@ -74,6 +74,14 @@ python streaming/consumers/django_consumer.py > logs/consumer.log 2>&1 &
 CONSUMER_PID=$!
 echo -e "${GREEN}✅ Kafka consumer started (PID: $CONSUMER_PID)${NC}"
 
+# Step 7: Start Flink jobs (optional, in background)
+if [ "${START_FLINK_JOBS:-true}" = "true" ]; then
+    echo -e "${YELLOW}📦 Step 7: Starting Flink processing jobs...${NC}"
+    python scripts/start_flink_jobs.py
+else
+    echo -e "${YELLOW}📦 Step 7: Flink jobs disabled (set START_FLINK_JOBS=true to enable)${NC}"
+fi
+
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
@@ -89,11 +97,14 @@ echo "📊 Service Status:"
 echo "   - Django: http://localhost:8000"
 echo "   - FastAPI Collector: http://localhost:9000"
 echo "   - Kafka Consumer: Running"
+echo "   - Flink Jobs: Running (if enabled)"
+echo "   - Flink Web UI: http://localhost:8081 (if Flink cluster is running)"
 echo ""
 echo "📝 Logs:"
 echo "   - Django: logs/django.log"
 echo "   - Collector: logs/collector.log"
 echo "   - Consumer: logs/consumer.log"
+echo "   - Flink: logs/flink_*.log"
 echo ""
 echo "🛑 To stop all services, run: ./scripts/stop_all.sh"
 echo "   Or manually: kill \$(cat logs/*.pid)"

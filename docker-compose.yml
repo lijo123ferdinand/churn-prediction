@@ -24,29 +24,41 @@ services:
     ports:
       - "9092:9092"
 
-  # jobmanager:
-  #   image: flink:1.17-scala_2.12-java11
-  #   container_name: jobmanager
-  #   hostname: jobmanager
-  #   ports:
-  #     - "8081:8081"  # Web UI
-  #   command: jobmanager
-  #   environment:
-  #     - |
-  #       FLINK_PROPERTIES=
-  #       jobmanager.rpc.address: jobmanager
+  # ---- Flink JobManager ----
+  flink-jobmanager:
+    image: flink:1.17-scala_2.12-java11
+    container_name: flink-jobmanager
+    hostname: flink-jobmanager
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 1
+    ports:
+      - "8081:8081" # Web UI
+    volumes:
+      - flink_data:/opt/flink/data
+    depends_on:
+      - kafka
+      - redis
 
-  # # taskmanager:
-  #   image: flink:1.17-scala_2.12-java11
-  #   container_name: taskmanager
-  #   depends_on:
-  #     - jobmanager
-  #   command: taskmanager
-  #   environment:
-  #     - |
-  #       FLINK_PROPERTIES=
-  #       jobmanager.rpc.address: jobmanager
-  #       taskmanager.numberOfTaskSlots: 2
+  # ---- Flink TaskManager ----
+  flink-taskmanager:
+    image: flink:1.17-scala_2.12-java11
+    container_name: flink-taskmanager
+    hostname: flink-taskmanager
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+    volumes:
+      - flink_data:/opt/flink/data
+    depends_on:
+      - flink-jobmanager
   # ---- Redis ----
   redis:
     image: redis:latest
@@ -73,3 +85,4 @@ services:
 
 volumes:
   postgres_data:
+  flink_data:

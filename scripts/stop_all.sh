@@ -35,6 +35,12 @@ if [ -d "logs" ]; then
     done
 fi
 
+# Stop Flink jobs
+echo -e "${YELLOW}Stopping Flink jobs...${NC}"
+if [ -f "scripts/stop_flink_jobs.py" ]; then
+    python scripts/stop_flink_jobs.py
+fi
+
 # Stop Docker services
 echo -e "${YELLOW}Stopping Docker services...${NC}"
 if command -v docker-compose &> /dev/null; then

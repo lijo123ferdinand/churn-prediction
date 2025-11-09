@@ -71,6 +71,8 @@ kafka-topics --bootstrap-server localhost:9092 --list
 - Kafka: `localhost:9092`
 - Redis: `localhost:6380`
 - PostgreSQL: `localhost:5432`
+- Flink JobManager: `localhost:8081` (Web UI)
+- Flink TaskManager: Running (no external port)
 
 ### Step 3: Setup Database
 
@@ -135,6 +137,19 @@ python streaming/consumers/django_consumer.py
 ```
 
 This processes events from Kafka and triggers model retraining.
+
+#### Terminal 4: Flink Jobs (Optional)
+
+```bash
+# Start all Flink jobs
+python scripts/start_flink_jobs.py
+
+# Or start individual jobs:
+python streaming/processors/flink_churn_ml_processor.py
+python streaming/processors/flink_cart_processor.py
+```
+
+**Note:** Flink jobs are automatically started by the startup scripts if `START_FLINK_JOBS=true` (default).
 
 ---
 
@@ -210,6 +225,7 @@ python ml/prediction/predict_cart_abandon.py
 | Kafka             | 9092 | localhost:9092        |
 | Redis             | 6380 | localhost:6380        |
 | PostgreSQL        | 5432 | localhost:5432        |
+| Flink Web UI      | 8081 | http://localhost:8081 |
 | Zookeeper         | 2181 | localhost:2181        |
 
 ---

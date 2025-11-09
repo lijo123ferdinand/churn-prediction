@@ -35,6 +35,13 @@ def stop_all_services():
     else:
         print("⚠️  No PIDs file found. Services may not be running.")
     
+    # Stop Flink jobs
+    print("\nStopping Flink jobs...")
+    try:
+        subprocess.run([sys.executable, "scripts/stop_flink_jobs.py"], check=False)
+    except Exception:
+        pass
+    
     # Stop Docker services
     print("\nStopping Docker services...")
     try:
