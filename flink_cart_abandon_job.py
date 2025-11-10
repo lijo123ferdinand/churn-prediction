@@ -145,6 +145,8 @@ class CartAbandonProcessor(KeyedProcessFunction):
             abandon_ms = ABANDON_WINDOW_MIN * 1000
             fire_at = ctx.timer_service().current_processing_time() + abandon_ms
             ctx.timer_service().register_processing_time_timer(fire_at)
+            print(f"🕐 Timer registered for user {user_id}, fires in {abandon_ms/1000:.1f} sec (at {fire_at})")
+
             self.timer_ts.update(fire_at)
 
             # live score
