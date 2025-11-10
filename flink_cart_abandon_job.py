@@ -186,7 +186,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
             "items": items,
             "cart_value": cart_value,
             "ts": ts_str
-    })
+    }, separators=(",", ":"))
 
     def on_timer(self, timestamp, ctx: 'KeyedProcessFunction.OnTimerContext'):
         user_id = ctx.get_current_key()
