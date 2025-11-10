@@ -142,7 +142,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
             purchased = False
 
             # abandon_ms = ABANDON_WINDOW_MIN * 60 * 1000
-            abandon_ms = ABANDON_WINDOW_MIN * 6000
+            abandon_ms = ABANDON_WINDOW_MIN * 1000
             fire_at = ctx.timer_service().current_processing_time() + abandon_ms
             ctx.timer_service().register_processing_time_timer(fire_at)
             self.timer_ts.update(fire_at)
