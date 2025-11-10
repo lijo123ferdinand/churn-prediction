@@ -74,7 +74,7 @@ def compute_features(event):
         },
     )
 
-    return json.dumps(
+    yield json.dumps(
         {
             "user_id": user_id,
             "event_count": event_count,
