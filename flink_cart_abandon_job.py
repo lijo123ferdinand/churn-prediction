@@ -32,7 +32,7 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
 
 MODEL_PATH = ("/shared_models/cart_model.joblib")
-ABANDON_WINDOW_MIN = int(os.getenv("ABANDON_WINDOW_MIN", "60"))
+ABANDON_WINDOW_MIN = int(os.getenv("ABANDON_WINDOW_MIN", "6"))
 RISK_THRESHOLD = float(os.getenv("CART_ABANDON_THRESHOLD", "0.75"))
 
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
