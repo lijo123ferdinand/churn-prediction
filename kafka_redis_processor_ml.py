@@ -42,7 +42,18 @@ def compute_features(event):
     user_id = event["user_id"]
     event_name = event.get("event_name")
     timestamp_str = event.get("timestamp")
-    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+
+# ✅ Handle missing or malformed timestamps gracefully
+    if not timestamp_str:
+        timestamp = datetime.utcnow()  # fallback to current UTC time
+        timestamp_str = timestamp.isoformat() + "Z"
+    else:
+        try:
+            timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+        except Exception:
+            timestamp = datetime.utcnow()
+            timestamp_str = timestamp.isoformat() + "Z"
+
 
     user_key = f"user:{user_id}"
     existing = r.hgetall(user_key)
