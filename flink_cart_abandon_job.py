@@ -181,7 +181,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
         self.has_purchased.update(purchased)
         
     # ✅ RETURN OUTPUT TO THE FLINK PIPELINE HERE
-        return json.dumps({
+        yield json.dumps({
             "user_id": user_id,
             "event": event_name,
             "items": items,
