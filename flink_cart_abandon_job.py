@@ -31,7 +31,7 @@ KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "user_events")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
 
-MODEL_PATH = os.getenv("CART_MODEL_PATH", "/shared_models/cart_model.joblib")
+MODEL_PATH = ("/shared_models/cart_model.joblib")
 ABANDON_WINDOW_MIN = int(os.getenv("ABANDON_WINDOW_MIN", "60"))
 RISK_THRESHOLD = float(os.getenv("CART_ABANDON_THRESHOLD", "0.75"))
 
