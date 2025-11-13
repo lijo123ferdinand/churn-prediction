@@ -90,12 +90,12 @@ def predict_cart_abandon():
                 msg = MIMEMultipart()
                 msg["Subject"] = subject
                 msg["From"] = email_from
-                msg["To"] = ", ".join(["alerts@example.com"])
+                msg["To"] = ", ".join(["lijo_ferdinand@thbs.com"])
                 msg.attach(MIMEText(body, "plain"))
 
                 ses.send_raw_email(
                     Source=email_from,
-                    Destinations=["alerts@example.com"],
+                    Destinations=["lijo_ferdinand@thbs.com"],
                     RawMessage={"Data": msg.as_string()},
                 )
                 print(f"✅ Alert sent for {user.email} ({prob:.2f})")

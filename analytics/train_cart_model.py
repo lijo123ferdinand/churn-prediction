@@ -15,7 +15,7 @@ django.setup()
 from analytics.utils_cart import get_cart_training_frame
 
 # ✅ Local shared path (make sure Flink sees this path too!)
-MODEL_DIR = os.getenv("MODEL_DIR", "/shared_models")
+MODEL_DIR = os.path.join(BASE_DIR, "shared_models")
 MODEL_PATH = os.path.join(MODEL_DIR, "cart_model.joblib")
 
 def train_cart_model():

@@ -10,38 +10,50 @@ print("Starting FastAPI collector...")
 async def startup_event():
     print("Collector startup: routes registered")
 
-# CORS middleware — allows React frontend on localhost:3003
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3003"],  # for testing you can use ["*"]
+    allow_origins=["http://localhost:3003"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Kafka producer
 producer = Producer({'bootstrap.servers': 'localhost:9092'})
-TOPIC = 'user_events'
 
-# Root GET route — sanity check
+USER_TOPIC = 'user_events'
+CART_TOPIC = 'cart_events'
+
+
 @app.get("/")
 async def root():
     return {"status": "running"}
-@app.get("/test")
-async def test():
-    print("GET /test called")
-    return {"message": "test route working"}
 
-# POST /collect route — single or batch events
+
 @app.post("/collect")
 async def collect_event(request: Request):
     try:
         events = await request.json()
+
         if isinstance(events, dict):
             events = [events]
+
         for event in events:
-            producer.produce(TOPIC, json.dumps(event).encode('utf-8'))
+            event_name = event.get("event_name", "")
+
+            # ----------------------------
+            # Routing Logic
+            # ----------------------------
+            if event_name in ["add_to_cart", "remove_from_cart", "update_quantity", "checkout", "view_cart"]:
+                topic = CART_TOPIC
+            else:
+                topic = USER_TOPIC
+
+            producer.produce(topic, json.dumps(event).encode("utf-8"))
+            print(f"📤 Sent event to {topic}: {event_name}")
+
         producer.flush()
         return {"status": "ok", "count": len(events)}
+
     except Exception as e:
         return {"status": "error", "detail": str(e)}

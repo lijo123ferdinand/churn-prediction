@@ -1,4 +1,5 @@
 from django.db import models
+from users.models import User
 
 # Create your models here.
 
@@ -25,3 +26,15 @@ class SMTPConfiguration(models.Model):
 
     def __str__(self):
         return self.smtp_client_name
+
+class CartEvent(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="cart_event_logs")
+    event_name = models.CharField(max_length=100)
+    properties = models.JSONField(default=dict)
+    timestamp = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.user_id} - {self.event_name} @ {self.timestamp}"

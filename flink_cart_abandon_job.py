@@ -202,6 +202,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
         print(f"⏰ TIMER [{user_id}] purchased={purchased} last_cart={last_cart} items={items}")
 
         if purchased or last_cart == 0 or items == 0:
+            yield from ()
             return
 
         features = np.array([[items, cart_value, 1 if items > 0 else 0, 1]])
@@ -220,7 +221,8 @@ class CartAbandonProcessor(KeyedProcessFunction):
         )
         print(f"🚨 TIMER ALERT [{user_id}] prob={prob:.2f} items={items} value={cart_value:.2f}")
 
-        if prob >= RISK_THRESHOLD:
+        # if prob >= RISK_THRESHOLD:
+        if True:
             send_email(
                 subject=f"🛒 CART ABANDONMENT ALERT: User {user_id} ({prob:.2f})",
                 body=(
@@ -237,7 +239,14 @@ class CartAbandonProcessor(KeyedProcessFunction):
         self.items_added.clear()
         self.cart_value_sum.clear()
         self.has_purchased.clear()
-        
+         # ✅ Always yield (even if it's empty output)
+        yield json.dumps({
+            "user_id": user_id,
+            "event": "timer_fired",
+            "abandon_prob": prob,
+            "items": items,
+            "cart_value": cart_value
+        }, separators=(",", ":"))
 
 # ──────────────────────────────────────────────────────────────
 # FLINK JOB SETUP
