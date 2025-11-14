@@ -4,6 +4,8 @@ import redis
 import joblib
 import numpy as np
 import traceback
+import requests
+
 from datetime import datetime, timezone
 
 from pyflink.common import Types
@@ -13,9 +15,14 @@ from pyflink.datastream.connectors.kafka import KafkaSource, KafkaOffsetsInitial
 from pyflink.datastream.functions import KeyedProcessFunction, RuntimeContext
 from pyflink.datastream.state import ValueStateDescriptor
 from pyflink.common.watermark_strategy import WatermarkStrategy
+SMTP_CONFIG = None
 
+# SMTP_API_URL = os.getenv("SMTP_API_URL")
+SMTP_API_URL = "http://localhost:8000/analytics/smtp-config/"
+    
 # --- Optional SES (only if you really need it)
-USE_SES = os.getenv("USE_SES", "false").lower() in ("1", "true", "yes")
+# USE_SES = os.getenv("USE_SES", "false").lower() in ("1", "true", "yes")
+USE_SES = True
 if USE_SES:
     import boto3
     from email.mime.multipart import MIMEMultipart
@@ -36,12 +43,23 @@ MODEL_PATH = os.path.join(BASE_DIR, "shared_models", "cart_model.joblib")
 ABANDON_WINDOW_MIN = int(os.getenv("ABANDON_WINDOW_MIN", "6"))
 RISK_THRESHOLD = float(os.getenv("CART_ABANDON_THRESHOLD", "0.75"))
 
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-ALERT_EMAIL_FROM = os.getenv("ALERT_EMAIL_FROM", "no-reply@example.com")
-ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO", "alerts@example.com")
+# AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+# AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+# AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+# ALERT_EMAIL_FROM = os.getenv("ALERT_EMAIL_FROM", "no-reply@example.com")
+ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO", "lijo_ferdinand@thbs.com")
 
+def load_smtp_from_backend():
+    try:
+        res = requests.get(SMTP_API_URL, timeout=5)
+        data = res.json()
+        print("SMTP config fetched")
+
+        return data
+
+    except Exception as e:
+        print("Failed to fetch SMTP config:", e)
+        return None
 # ──────────────────────────────────────────────────────────────
 # EMAIL SENDER
 # ──────────────────────────────────────────────────────────────
@@ -67,22 +85,27 @@ def send_email(subject: str, body: str):
     try:
         ses = boto3.client(
             "ses",
-            region_name=AWS_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=SMTP_CONFIG["region"],
+            aws_access_key_id=SMTP_CONFIG["aws_access_key"],
+            aws_secret_access_key=SMTP_CONFIG["aws_secret"],
         )
+
         msg = MIMEMultipart()
         msg["Subject"] = subject
-        msg["From"] = ALERT_EMAIL_FROM
+        msg["From"] = SMTP_CONFIG["username"]
         msg["To"] = ALERT_EMAIL_TO
         msg.attach(MIMEText(body, "plain"))
 
         ses.send_raw_email(
-            Source=ALERT_EMAIL_FROM,
+            Source=SMTP_CONFIG["username"],
             Destinations=[ALERT_EMAIL_TO],
             RawMessage={"Data": msg.as_string()},
         )
+
         print(f"✅ Email sent: {subject}")
+
+    except Exception as e:
+        print(f"❌ SES Error: {e}")
 
     except Exception as e:
         print(f"❌ SES Error: {e}")
@@ -275,6 +298,15 @@ def main():
         print(f"📌 Kafka: {KAFKA_BOOTSTRAP} / {KAFKA_TOPIC}")
         print(f"📌 Redis: {REDIS_HOST}:{REDIS_PORT}")
         print(f"📌 Abandon window: {ABANDON_WINDOW_MIN} seconds  Threshold: {RISK_THRESHOLD}")
+        global SMTP_CONFIG
+
+        SMTP_CONFIG = load_smtp_from_backend()
+        print("SMTP LOADED:", SMTP_CONFIG)
+        if SMTP_CONFIG is None:
+            raise RuntimeError("❌ SMTP CONFIG NOT LOADED — Cannot send emails.")
+
+
+
 
         env = StreamExecutionEnvironment.get_execution_environment()
         env.set_parallelism(1)
