@@ -337,7 +337,7 @@ class ServiceManager:
         """Start Django development server."""
         print_info("Starting Django server on http://localhost:8000...")
         
-        cmd = [sys.executable, 'manage.py', 'runserver']
+        cmd = [sys.executable, 'manage.py', 'runserver', '0.0.0.0:8000']
         process = subprocess.Popen(
             cmd,
             cwd=self.project_root,
@@ -418,7 +418,7 @@ class ServiceManager:
             print_error(f"Consumer script not found: {script_path}")
             return
         
-        cmd = [sys.executable, str(script_path)]
+        cmd = [sys.executable, "-u", str(script_path)]
         process = subprocess.Popen(
             cmd,
             cwd=self.project_root,
