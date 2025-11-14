@@ -52,4 +52,19 @@ services:
     image: redis:latest
     ports:
       - "6380:6379"
+  # ---- PostgreSQL ----
+  postgres-db:
+    image: postgres:16
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: churn_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
+volumes:
+  postgres_data:
+  flink_data:
