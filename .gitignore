@@ -1,0 +1,128 @@
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.flink_venv/
+.fink-venv/
+.flaskenv
+*.env
+*.pyenv
+.flinx_venv/
+
+# Environment files
+.env
+.env.local
+.env.dev
+.env.prod
+.env.*
+
+# ========================
+# Django
+# ========================
+staticfiles/
+media/
+*.log
+*.pot
+*.pyc
+db.sqlite3
+local_settings.py
+
+# Django migrations cache
+**/migrations/**/
+!**/migrations/__init__.py
+
+# ========================
+# FastAPI
+# ========================
+event_system/collector/__pycache__/
+event_system/collector/*.log
+
+# ========================
+# Kafka, Redis, Postgres, Docker
+# ========================
+docker-compose.override.yml
+docker-compose.debug.yml
+*.pid
+*.seed
+*.lock
+
+# Kafka logs
+kafka-logs/
+zookeeper/
+data/
+logs/
+
+# Redis dump
+dump.rdb
+appendonly.aof
+
+# PostgreSQL
+*.sql
+*.psql
+postgres-data/
+
+# Flink job logs
+flink-1.20.0/log/
+flink-1.20.0/logs/
+flink-1.20.0/var/
+flink-1.20.0/tmp/
+flink-checkpoints/
+flink-savepoints/
+
+# Flink Python cache
+**/.cache/
+**/.state/
+**/.flink/
+
+# ========================
+# Model Files
+# ========================
+*.joblib
+*.pkl
+*.h5
+*.onnx
+shared_models/*.joblib
+
+# ========================
+# IDE / Editors
+# ========================
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+
+# ========================
+# OS Files
+# ========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
+**/email_alerts.log
+
+# ========================
+# Node / Frontend (if used)
+# ========================
+node_modules/
+dist/
+build/
+
+# ========================
+# Temp Files
+# ========================
+tmp/
+temp/
+.cache/
+pytest_cache/
+__snapshots__/
