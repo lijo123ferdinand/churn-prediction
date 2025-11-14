@@ -48,17 +48,44 @@
 			"typeName": "page"
 		},
 		{
+			"x": 677.2807315041073,
+			"y": -199.67357358934942,
+			"rotation": 0,
+			"isLocked": false,
+			"opacity": 1,
+			"meta": {},
+			"id": "shape:zsStdqeUQ9ni_1Co8wqVf",
+			"type": "text",
+			"props": {
+				"color": "black",
+				"size": "l",
+				"w": 837.6146240234375,
+				"text": "   ┌────────────────────────┐\n   │             Collector API                 │\n   └────────────┬───────────┘\n                              │\n                  Kafka \"user_events\"\n                           │\n      ┌─────────┴─────────┐\n      │                                        │\nDjango Consumer              Flink Job\n      │                                         │\n Batch training           Real-time aggregation\n      │                                        │\n   Model.pkl                    Redis Feature Store\n      │                                        │\n      └──────────┬────────┘\n                             │\n         Predict churn in\n       real-time or batch\n",
+				"font": "draw",
+				"textAlign": "start",
+				"autoSize": true,
+				"scale": 1
+			},
+			"parentId": "page:page",
+			"index": "a1",
+			"typeName": "shape"
+		},
+		{
 			"id": "pointer:pointer",
 			"typeName": "pointer",
-			"x": 528.6666870117188,
-			"y": 548,
-			"lastActivityTimestamp": 1761641235072,
+			"x": 859.8127763897071,
+			"y": 517.5192419864077,
+			"lastActivityTimestamp": 1763038792027,
 			"meta": {}
 		},
 		{
 			"followingUserId": null,
 			"opacityForNextShape": 1,
-			"stylesForNextShape": {},
+			"stylesForNextShape": {
+				"tldraw:size": "l",
+				"tldraw:font": "sans",
+				"tldraw:textAlign": "middle"
+			},
 			"brush": null,
 			"scribbles": [],
 			"cursor": {
@@ -72,7 +99,7 @@
 			"screenBounds": {
 				"x": 0,
 				"y": 0,
-				"w": 992,
+				"w": 1062,
 				"h": 558
 			},
 			"insets": [
@@ -101,7 +128,7 @@
 			"typeName": "instance"
 		},
 		{
-			"editingShapeId": "shape:zsStdqeUQ9ni_1Co8wqVf",
+			"editingShapeId": null,
 			"croppingShapeId": null,
 			"selectedShapeIds": [
 				"shape:zsStdqeUQ9ni_1Co8wqVf"
@@ -116,34 +143,34 @@
 			"typeName": "instance_page_state"
 		},
 		{
-			"x": 0,
-			"y": -200,
-			"z": 1,
+			"x": 1296.9938599642135,
+			"y": 424.2131996788765,
+			"z": 0.3341359743912904,
 			"meta": {},
 			"id": "camera:page:page",
 			"typeName": "camera"
 		},
 		{
-			"x": 242.328125,
-			"y": 40,
+			"x": -801.4531073031378,
+			"y": -291.9622331172181,
 			"rotation": 0,
 			"isLocked": false,
 			"opacity": 1,
 			"meta": {},
-			"id": "shape:zsStdqeUQ9ni_1Co8wqVf",
+			"id": "shape:CJcDFRVCGuFGWTMUMhv-l",
 			"type": "text",
 			"props": {
 				"color": "black",
-				"size": "m",
-				"w": 558.7396240234375,
-				"text": "   ┌────────────────────────┐\n   │             Collector API                 │\n   └────────────┬───────────┘\n                              │\n                  Kafka \"user_events\"\n                           │\n      ┌─────────┴─────────┐\n      │                                        │\nDjango Consumer              Flink Job\n      │                                         │\n Batch training           Real-time aggregation\n      │                                        │\n   Model.pkl                    Redis Feature Store\n      │                                        │\n      └──────────┬────────┘\n                             │\n         Predict churn in\n       real-time or batch\n",
-				"font": "draw",
-				"textAlign": "start",
+				"size": "l",
+				"w": 1100.375,
+				"text": "Frontend\n  ↓\nJS SDK (event-sdk.js)\n  ↓\nFastAPI Collector (/collect)\n  ↓\nKafka  \n ──────────┐\n                      │\n          ┌───────────┴────────────┐\n          │                                                  │\n   Django consumer.py              Django cart_consumer.py\n          │                                                  │\n     UserEvent DB                           CartEvent DB\n          │                                                  │\n   train_model.py                        train_cart_model.py\n          │                                                  │\n shared_models/churn_              model   shared_models/cart_model\n          └──────────┬────────────┘\n                                 │\n                         Flink Jobs\n          (real-time ML prediction & scoring)\n                                 ↓\n                               Redis\n                                 ↓  \n            Django Dashboard / Alerts",
+				"font": "sans",
+				"textAlign": "middle",
 				"autoSize": true,
 				"scale": 1
 			},
 			"parentId": "page:page",
-			"index": "a1",
+			"index": "a29h3",
 			"typeName": "shape"
 		}
 	]
