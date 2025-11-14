@@ -26,12 +26,13 @@ if USE_SES:
 # ENV CONFIG
 # ──────────────────────────────────────────────────────────────
 KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP", "localhost:9092")   # <-- set to 172.18.0.4:9092 if needed
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "user_events")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "cart_events")
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6380"))
 
-MODEL_PATH = ("/shared_models/cart_model.joblib")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "shared_models", "cart_model.joblib")
 ABANDON_WINDOW_MIN = int(os.getenv("ABANDON_WINDOW_MIN", "6"))
 RISK_THRESHOLD = float(os.getenv("CART_ABANDON_THRESHOLD", "0.75"))
 
@@ -45,9 +46,24 @@ ALERT_EMAIL_TO = os.getenv("ALERT_EMAIL_TO", "alerts@example.com")
 # EMAIL SENDER
 # ──────────────────────────────────────────────────────────────
 def send_email(subject: str, body: str):
+    # Log to file
+    try:
+        with open("email_alerts.log", "a") as f:
+            f.write("\n" + "="*60 + "\n")
+            f.write(f"📩 EMAIL SENT AT: {datetime.now(timezone.utc).isoformat()}\n")
+            f.write(f"SUBJECT: {subject}\n")
+            f.write(body + "\n")
+            f.write("="*60 + "\n")
+        print(f"📝 Email logged to email_alerts.log")
+    except Exception as log_err:
+        print(f"⚠️ Failed to write email log: {log_err}")
+
+    # If SES disabled → print mock
     if not USE_SES:
         print(f"📩 EMAIL (mock)\nSUBJECT: {subject}\n{body}")
         return
+
+    # Real SES
     try:
         ses = boto3.client(
             "ses",
@@ -67,6 +83,7 @@ def send_email(subject: str, body: str):
             RawMessage={"Data": msg.as_string()},
         )
         print(f"✅ Email sent: {subject}")
+
     except Exception as e:
         print(f"❌ SES Error: {e}")
 
@@ -230,7 +247,7 @@ class CartAbandonProcessor(KeyedProcessFunction):
                     f"Items: {items}\n"
                     f"Cart value: {cart_value}\n"
                     f"Score: {prob:.2f}\n"
-                    f"Window: {ABANDON_WINDOW_MIN} minutes inactivity\n"
+                    f"Window: {ABANDON_WINDOW_MIN} seconds inactivity\n"
                 ),
             )
 
@@ -257,7 +274,7 @@ def main():
         print(f"📌 MODEL PATH: {MODEL_PATH}")
         print(f"📌 Kafka: {KAFKA_BOOTSTRAP} / {KAFKA_TOPIC}")
         print(f"📌 Redis: {REDIS_HOST}:{REDIS_PORT}")
-        print(f"📌 Abandon window: {ABANDON_WINDOW_MIN} mins  Threshold: {RISK_THRESHOLD}")
+        print(f"📌 Abandon window: {ABANDON_WINDOW_MIN} seconds  Threshold: {RISK_THRESHOLD}")
 
         env = StreamExecutionEnvironment.get_execution_environment()
         env.set_parallelism(1)
