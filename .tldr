@@ -71,25 +71,44 @@
 			"typeName": "shape"
 		},
 		{
+			"x": -801.4531073031378,
+			"y": -291.9622331172181,
+			"rotation": 0,
+			"isLocked": false,
+			"opacity": 1,
+			"meta": {},
+			"id": "shape:CJcDFRVCGuFGWTMUMhv-l",
+			"type": "text",
+			"props": {
+				"color": "black",
+				"size": "l",
+				"w": 1100.375,
+				"text": "Frontend\n  ↓\nJS SDK (event-sdk.js)\n  ↓\nFastAPI Collector (/collect)\n  ↓\nKafka  \n ──────────┐\n                      │\n          ┌───────────┴────────────┐\n          │                                                  │\n   Django consumer.py              Django cart_consumer.py\n          │                                                  │\n     UserEvent DB                           CartEvent DB\n          │                                                  │\n   train_model.py                        train_cart_model.py\n          │                                                  │\n shared_models/churn_              model   shared_models/cart_model\n          └──────────┬────────────┘\n                                 │\n                         Flink Jobs\n          (real-time ML prediction & scoring)\n                                 ↓\n                               Redis\n                                 ↓  \n            Django Dashboard / Alerts",
+				"font": "sans",
+				"textAlign": "middle",
+				"autoSize": true,
+				"scale": 1
+			},
+			"parentId": "page:page",
+			"index": "a29h3",
+			"typeName": "shape"
+		},
+		{
 			"id": "pointer:pointer",
 			"typeName": "pointer",
-			"x": 859.8127763897071,
-			"y": 517.5192419864077,
-			"lastActivityTimestamp": 1763038792027,
+			"x": 318.5241764377847,
+			"y": 1445.509211500652,
+			"lastActivityTimestamp": 1763443069716,
 			"meta": {}
 		},
 		{
 			"followingUserId": null,
 			"opacityForNextShape": 1,
-			"stylesForNextShape": {
-				"tldraw:size": "l",
-				"tldraw:font": "sans",
-				"tldraw:textAlign": "middle"
-			},
+			"stylesForNextShape": {},
 			"brush": null,
 			"scribbles": [],
 			"cursor": {
-				"type": "default",
+				"type": "move",
 				"rotation": 0
 			},
 			"isFocusMode": false,
@@ -99,7 +118,7 @@
 			"screenBounds": {
 				"x": 0,
 				"y": 0,
-				"w": 1062,
+				"w": 1031.3333740234375,
 				"h": 558
 			},
 			"insets": [
@@ -131,9 +150,9 @@
 			"editingShapeId": null,
 			"croppingShapeId": null,
 			"selectedShapeIds": [
-				"shape:zsStdqeUQ9ni_1Co8wqVf"
+				"shape:u8zIn2ijlZW79m5_P2FRN"
 			],
-			"hoveredShapeId": "shape:zsStdqeUQ9ni_1Co8wqVf",
+			"hoveredShapeId": null,
 			"erasingShapeIds": [],
 			"hintingShapeIds": [],
 			"focusedGroupId": null,
@@ -143,34 +162,34 @@
 			"typeName": "instance_page_state"
 		},
 		{
-			"x": 1296.9938599642135,
-			"y": 424.2131996788765,
-			"z": 0.3341359743912904,
+			"x": 1158.4245267514443,
+			"y": -401.4592785106889,
+			"z": 0.3403413306950284,
 			"meta": {},
 			"id": "camera:page:page",
 			"typeName": "camera"
 		},
 		{
-			"x": -801.4531073031378,
-			"y": -291.9622331172181,
+			"x": -286.7505328645409,
+			"y": 1134.308302124067,
 			"rotation": 0,
 			"isLocked": false,
 			"opacity": 1,
 			"meta": {},
-			"id": "shape:CJcDFRVCGuFGWTMUMhv-l",
+			"id": "shape:u8zIn2ijlZW79m5_P2FRN",
 			"type": "text",
 			"props": {
 				"color": "black",
-				"size": "l",
-				"w": 1100.375,
-				"text": "Frontend\n  ↓\nJS SDK (event-sdk.js)\n  ↓\nFastAPI Collector (/collect)\n  ↓\nKafka  \n ──────────┐\n                      │\n          ┌───────────┴────────────┐\n          │                                                  │\n   Django consumer.py              Django cart_consumer.py\n          │                                                  │\n     UserEvent DB                           CartEvent DB\n          │                                                  │\n   train_model.py                        train_cart_model.py\n          │                                                  │\n shared_models/churn_              model   shared_models/cart_model\n          └──────────┬────────────┘\n                                 │\n                         Flink Jobs\n          (real-time ML prediction & scoring)\n                                 ↓\n                               Redis\n                                 ↓  \n            Django Dashboard / Alerts",
-				"font": "sans",
-				"textAlign": "middle",
+				"size": "m",
+				"w": 722.3229370117188,
+				"text": "     ┌──────────────────────┐\n     │ Client Apps (Web/App)│\n     └──────────┬───────────┘\n                │\n                ▼\n       ┌─────────────────┐\n       │  Custom Event   │  (Collector API)\n       │   Collectors    │\n       └───────┬─────────┘\n               │  HTTP/HTTPS\n               ▼\n      ┌───────────────────┐\n      │     Kafka/MSK     │  <-- MAIN BACKBONE\n      └────────┬──────────┘\n               │\n               │  raw events\n               ▼\n   ┌────────────────────────────┐\n   │ Real-Time Stream Processor │ (Flink / Spark)\n   └───────────┬────────────────┘\n               │\n      ┌────────────────────────────┐\n      │  Enrichment + Validation   │\n      │  ML Feature Engineering    │\n      │  Stateful User Sessions    │\n      │  Fraud / Risk / Scoring    │\n      └───────────┬────────────────┘\n                   │\n                   │ enriched events\n                   ▼\n       ┌──────────────────────────┐\n       │ Multi-Destination Layer │\n       └──────────┬──────────────┘\n                  │\n     ┌────────────┼───────────┬─────────────┐\n     ▼            ▼           ▼             ▼\n ClickHouse   DynamoDB     S3 / HDFS     Elasticsearch  \n (Analytics)  (Real-time)  (Data Lake)   (Search/Logs)",
+				"font": "draw",
+				"textAlign": "start",
 				"autoSize": true,
-				"scale": 1
+				"scale": 1.2671154494666093
 			},
 			"parentId": "page:page",
-			"index": "a29h3",
+			"index": "a32V7",
 			"typeName": "shape"
 		}
 	]
