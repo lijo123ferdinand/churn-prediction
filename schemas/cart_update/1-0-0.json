@@ -1,0 +1,21 @@
+{
+    "$id": "com.company/cart_update/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "cart_update" },
+      "properties": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "string" },
+          "qty_change": { "type": "number" },
+          "new_qty": { "type": "number" },
+          "cart_value": { "type": "number" },
+          "currency": { "type": ["string","null"] }
+        }
+      }
+    }
+  }
+  

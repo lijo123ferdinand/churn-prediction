@@ -1,0 +1,13 @@
+Used by:
+
+page_view
+
+product_view
+
+add_to_cart
+
+checkout
+
+purchase
+
+search events

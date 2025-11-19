@@ -1,0 +1,19 @@
+{
+    "$id": "com.company/checkout_started/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "checkout_started" },
+      "properties": {
+        "type": "object",
+        "properties": {
+          "cart_value": { "type": "number" },
+          "items_count": { "type": "number" },
+          "payment_method_selected": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+  

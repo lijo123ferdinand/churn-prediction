@@ -1,0 +1,21 @@
+{
+    "$id": "com.company/wishlist_add/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "wishlist_add" },
+      "properties": {
+        "type": "object",
+        "required": ["product_id"],
+        "properties": {
+          "product_id": { "type": "string" },
+          "product_name": { "type": ["string","null"] },
+          "price": { "type": ["number","null"] },
+          "currency": { "type": ["string","null"] }
+        }
+      }
+    }
+  }
+  

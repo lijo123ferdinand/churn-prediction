@@ -1,0 +1,18 @@
+{
+    "$id": "com.company/login/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "login" },
+      "properties": {
+        "type": "object",
+        "properties": {
+          "login_method": { "type": "string" },          // email/password, google, otp, facebook
+          "success": { "type": "boolean" }
+        }
+      }
+    }
+  }
+  

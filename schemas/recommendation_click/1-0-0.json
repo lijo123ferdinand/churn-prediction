@@ -1,0 +1,22 @@
+{
+    "$id": "com.company/recommendation_click/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "recommendation_click" },
+      "properties": {
+        "type": "object",
+        "required": ["product_id", "source"],
+        "properties": {
+          "product_id": { "type": "string" },
+          "source": { "type": "string" },          // homepage, search_carousel, PDP, similar_products
+          "position": { "type": ["number","null"] },
+          "algorithm": { "type": ["string","null"] },
+          "score": { "type": ["number","null"] }
+        }
+      }
+    }
+  }
+  

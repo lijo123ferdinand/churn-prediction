@@ -1,0 +1,19 @@
+{
+    "$id": "com.company/screen_view/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "screen_view" },
+      "properties": {
+        "type": "object",
+        "properties": {
+          "screen_name": { "type": "string" },
+          "screen_class": { "type": ["string","null"] },
+          "duration_ms": { "type": ["number","null"] }
+        }
+      }
+    }
+  }
+  

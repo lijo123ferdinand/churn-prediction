@@ -1,0 +1,21 @@
+{
+    "$id": "com.company/add_to_cart/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "add_to_cart" },
+      "properties": {
+        "type": "object",
+        "required": ["product_id", "qty"],
+        "properties": {
+          "product_id": { "type": "string" },
+          "qty": { "type": "number", "minimum": 1 },
+          "unit_price": { "type": ["number", "null"] },
+          "currency": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+  

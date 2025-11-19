@@ -1,0 +1,50 @@
+{
+    "$id": "com.company/base_event/jsonschema/1-0-0",
+    "type": "object",
+    "required": ["user_id", "event_name", "timestamp"],
+    "properties": {
+      "event_name": { "type": "string" },
+      "timestamp": { "type": "string", "format": "date-time" },
+  
+      "user_id": { "type": ["string", "null"] },
+      "session_id": { "type": ["string", "null"] },
+      "anonymous_id": { "type": ["string", "null"] },
+  
+      "page_url": { "type": ["string", "null"] },
+      "referrer_url": { "type": ["string", "null"] },
+  
+      "device": {
+        "type": "object",
+        "properties": {
+          "user_agent": { "type": "string" },
+          "os": { "type": "string" },
+          "browser": { "type": "string" },
+          "device_type": { "type": "string" }
+        }
+      },
+  
+      "app": {
+        "type": "object",
+        "properties": {
+          "app_name": { "type": "string" },
+          "app_version": { "type": "string" },
+          "platform": { "type": "string" }
+        }
+      },
+  
+      "location": {
+        "type": "object",
+        "properties": {
+          "ip": { "type": "string" },
+          "country": { "type": "string" },
+          "city": { "type": "string" },
+          "lat": { "type": ["number", "null"] },
+          "lon": { "type": ["number", "null"] }
+        }
+      },
+  
+      "properties": { "type": "object" },
+      "context": { "type": "object" }
+    }
+  }
+  

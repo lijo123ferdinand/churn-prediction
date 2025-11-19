@@ -1,0 +1,24 @@
+{
+    "$id": "com.company/page_view/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "page_view" },
+      "properties": {
+        "type": "object",
+        "properties": {
+          "page_title": { "type": "string" },
+          "page_url": { "type": "string" },
+          "referrer": { "type": ["string", "null"] },
+          "utm_source": { "type": ["string","null"] },
+          "utm_medium": { "type": ["string","null"] },
+          "utm_campaign": { "type": ["string","null"] },
+          "utm_term": { "type":["string","null"] },
+          "utm_content": { "type":["string","null"] }
+        }
+      }
+    }
+  }
+  

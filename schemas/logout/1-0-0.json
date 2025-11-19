@@ -1,0 +1,17 @@
+{
+    "$id": "com.company/logout/jsonschema/1-0-0",
+    "type": "object",
+    "allOf": [
+      { "$ref": "../base_event/1-0-0.json" }
+    ],
+    "properties": {
+      "event_name": { "const": "logout" },
+      "properties": {
+        "type": "object",
+        "properties": {
+          "reason": { "type": ["string","null"] }   // manual, timeout, forced
+        }
+      }
+    }
+  }
+  
